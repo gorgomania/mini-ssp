@@ -16,6 +16,7 @@ import (
 	"github.com/gorgomania/mini-ssp/internal/dsp"
 	"github.com/gorgomania/mini-ssp/internal/ssp"
 	pb "github.com/gorgomania/mini-ssp/proto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //go:embed web
@@ -99,6 +100,7 @@ func main() {
 	static, _ := fs.Sub(webFS, "web")
 	http.Handle("/", http.FileServer(http.FS(static)))
 	http.HandleFunc("/bid", ssp.BidHandler(dsps))
+	http.Handle("/metrics", promhttp.Handler())
 
 	slog.Info("SSP demo", "url", "http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
