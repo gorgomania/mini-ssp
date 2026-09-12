@@ -59,8 +59,9 @@ func startDSP(name, addr string, basePrice float64, boostGeo string, boostPrice 
 // ── SSP HTTP server ──────────────────────────────────────────────────────────
 
 type bidRequest struct {
-	Geo    string `json:"geo"`
-	Format string `json:"format"`
+	Geo        string  `json:"geo"`
+	Format     string  `json:"format"`
+	FloorPrice float64 `json:"floor_price"`
 }
 
 type bidResponse struct {
@@ -92,7 +93,7 @@ func makeBidHandler(dsps []dsp.DSP) http.HandlerFunc {
 		}
 		wg.Wait()
 
-		winner, clearingPrice, ok := auction.SecondPrice(bids)
+		winner, clearingPrice, ok := auction.SecondPrice(bids, req.FloorPrice)
 		if !ok {
 			log.Printf("no bids geo=%s format=%s", req.Geo, req.Format)
 			http.Error(w, "no bids", http.StatusNoContent)

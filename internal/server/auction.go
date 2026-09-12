@@ -26,7 +26,7 @@ func (s *AuctionServer) RunAuction(ctx context.Context, req *pb.BidRequest) (*pb
 		}
 	}
 
-	winner, clearingPrice, ok := auction.SecondPrice(bids)
+	winner, clearingPrice, ok := auction.SecondPrice(bids, 0)
 	if !ok {
 		log.Printf("no bids geo=%s format=%s", req.Geo, req.Format)
 		return &pb.BidResponse{}, nil
