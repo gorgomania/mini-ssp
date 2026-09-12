@@ -1,0 +1,39 @@
+services:
+  dsp-adcorp:
+    build: { context: ., target: dsp }
+    command: ["-name", "adcorp", "-port", "50051", "-boost-geo", "US", "-boost-price", "2.0"]
+
+  dsp-medianet:
+    build: { context: ., target: dsp }
+    command: ["-name", "medianet", "-port", "50051", "-boost-geo", "EU", "-boost-price", "1.8"]
+
+  dsp-quickads:
+    build: { context: ., target: dsp }
+    command: ["-name", "quickads", "-port", "50051", "-base-price", "1.0"]
+
+  dsp-ruads:
+    build: { context: ., target: dsp }
+    command: ["-name", "ruads", "-port", "50051", "-boost-geo", "RU", "-boost-price", "1.2"]
+
+  dsp-apacads:
+    build: { context: ., target: dsp }
+    command: ["-name", "apacads", "-port", "50051", "-boost-geo", "JP", "-boost-price", "1.5"]
+
+  dsp-latamads:
+    build: { context: ., target: dsp }
+    command: ["-name", "latamads", "-port", "50051", "-boost-geo", "BR", "-boost-price", "1.0"]
+
+  ssp:
+    build: { context: ., target: ssp }
+    ports:
+      - "8080:8080"
+    command:
+      - "-dsps"
+      - "dsp-adcorp:50051,dsp-medianet:50051,dsp-quickads:50051,dsp-ruads:50051,dsp-apacads:50051,dsp-latamads:50051"
+    depends_on:
+      - dsp-adcorp
+      - dsp-medianet
+      - dsp-quickads
+      - dsp-ruads
+      - dsp-apacads
+      - dsp-latamads

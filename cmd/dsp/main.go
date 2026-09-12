@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"log/slog"
 	"math/rand"
 	"net"
+	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -22,15 +23,18 @@ type dspServer struct {
 }
 
 func (s *dspServer) RunAuction(_ context.Context, req *pb.BidRequest) (*pb.BidResponse, error) {
-	price := s.basePrice + rand.Float64()*s.basePrice*0.5
+	premium := s.basePrice + rand.Float64()*s.basePrice*0.5
 	if s.boostGeo != "" && req.Geo == s.boostGeo {
-		price = s.boostPrice + rand.Float64()*s.boostPrice*0.5
+		premium = s.boostPrice + rand.Float64()*s.boostPrice*0.5
 	}
-	log.Printf("bid geo=%s format=%s price=%.3f", req.Geo, req.Format, price)
+	price := req.FloorPrice + premium
+	slog.Info("bid", "geo", req.Geo, "format", req.Format, "price", price)
 	return &pb.BidResponse{AdvertiserId: s.name, Price: price}, nil
 }
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	name := flag.String("name", "dsp", "advertiser ID")
 	port := flag.String("port", "50051", "gRPC listen port")
 	basePrice := flag.Float64("base-price", 0.5, "base bid price")
@@ -40,7 +44,8 @@ func main() {
 
 	lis, err := net.Listen("tcp", ":"+*port)
 	if err != nil {
-		log.Fatalf("listen: %v", err)
+		slog.Error("listen failed", "err", err)
+		os.Exit(1)
 	}
 
 	s := grpc.NewServer()
@@ -52,9 +57,9 @@ func main() {
 	})
 	reflection.Register(s)
 
-	log.Printf("DSP %q on :%s (base=%.2f boost_geo=%s boost=%.2f)",
-		*name, *port, *basePrice, *boostGeo, *boostPrice)
+	slog.Info("DSP started", "name", *name, "port", *port, "boost_geo", *boostGeo)
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("serve: %v", err)
+		slog.Error("serve failed", "err", err)
+		os.Exit(1)
 	}
 }
