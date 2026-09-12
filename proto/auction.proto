@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package auction;
+
+option go_package = "github.com/gorgomania/mini-ssp/proto";
+
+message BidRequest {
+  string geo = 1;
+  string format = 2;
+}
+
+message BidResponse {
+  string advertiser_id = 1;
+  double price = 2;
+}
+
+service Auction {
+  rpc RunAuction(BidRequest) returns (BidResponse);
+}
