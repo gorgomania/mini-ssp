@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>mini-SSP demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 32px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-bottom: 32px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 24px;
+      max-width: 960px;
+    }
+
+    .card {
+      background: #1e2330;
+      border: 1px solid #2d3448;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    select {
+      width: 100%;
+      background: #131720;
+      border: 1px solid #2d3448;
+      border-radius: 8px;
+      color: #e2e8f0;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      margin-bottom: 16px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    select:focus { border-color: #6366f1; }
+
+    button {
+      width: 100%;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 4px;
+    }
+
+    button:hover { background: #4f46e5; }
+    button:disabled { background: #374151; cursor: not-allowed; }
+
+    .result-panel h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #94a3b8;
+    }
+
+    .result-empty {
+      color: #4b5563;
+      font-size: 0.875rem;
+      text-align: center;
+      padding: 40px 0;
+    }
+
+    .auction-result {
+      display: none;
+    }
+
+    .winner-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .badge {
+      background: #6366f1;
+      color: #fff;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .advertiser {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .price {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #34d399;
+    }
+
+    .price-label {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 24px;
+      margin-top: 16px;
+    }
+
+    .meta-item {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .meta-item span {
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #2d3448;
+      margin: 24px 0;
+    }
+
+    .history h3 {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead th {
+      text-align: left;
+      color: #4b5563;
+      font-weight: 500;
+      font-size: 0.75rem;
+      padding: 6px 8px;
+      border-bottom: 1px solid #2d3448;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #1a1f2e;
+      transition: background 0.1s;
+    }
+
+    tbody tr:hover { background: #131720; }
+
+    tbody td {
+      padding: 8px 8px;
+      color: #94a3b8;
+    }
+
+    tbody td:first-child { color: #e2e8f0; }
+
+    .tag {
+      display: inline-block;
+      background: #1a1f2e;
+      border: 1px solid #2d3448;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.72rem;
+      color: #64748b;
+    }
+
+    .error-msg {
+      color: #f87171;
+      font-size: 0.85rem;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>mini-SSP</h1>
+  <p class="subtitle">Real-time second-price auction demo</p>
+
+  <div class="layout">
+    <div class="card">
+      <label>Geo</label>
+      <select id="geo">
+        <option value="US">US — United States</option>
+        <option value="EU">EU — Europe</option>
+        <option value="RU">RU — Russia</option>
+        <option value="JP">JP — Japan</option>
+        <option value="BR">BR — Brazil</option>
+      </select>
+
+      <label>Format</label>
+      <select id="format">
+        <option value="banner">Banner</option>
+        <option value="video">Video</option>
+        <option value="native">Native</option>
+      </select>
+
+      <button id="runBtn" onclick="runAuction()">Run Auction</button>
+      <div id="error" class="error-msg"></div>
+    </div>
+
+    <div class="card result-panel">
+      <h2>Last result</h2>
+
+      <div id="empty" class="result-empty">Run an auction to see results</div>
+
+      <div id="result" class="auction-result">
+        <div class="winner-row">
+          <span class="badge">Winner</span>
+          <span class="advertiser" id="res-advertiser"></span>
+        </div>
+        <div class="price" id="res-price"></div>
+        <div class="price-label">clearing price (CPM)</div>
+        <div class="meta">
+          <div class="meta-item">Geo: <span id="res-geo"></span></div>
+          <div class="meta-item">Format: <span id="res-format"></span></div>
+          <div class="meta-item">Time: <span id="res-time"></span></div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="history">
+        <h3>History</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Winner</th>
+              <th>Price</th>
+              <th>Geo</th>
+              <th>Format</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const history = [];
+
+    async function runAuction() {
+      const geo = document.getElementById('geo').value;
+      const format = document.getElementById('format').value;
+      const btn = document.getElementById('runBtn');
+      const errorEl = document.getElementById('error');
+
+      btn.disabled = true;
+      btn.textContent = 'Running…';
+      errorEl.textContent = '';
+
+      try {
+        const res = await fetch('/bid', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ geo, format }),
+        });
+
+        if (!res.ok) {
+          errorEl.textContent = res.status === 204 ? 'No bids received' : `Error: ${res.status}`;
+          return;
+        }
+
+        const data = await res.json();
+        showResult(data, geo, format);
+      } catch (e) {
+        errorEl.textContent = 'Failed to reach SSP server';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Run Auction';
+      }
+    }
+
+    function showResult(data, geo, format) {
+      document.getElementById('empty').style.display = 'none';
+      const result = document.getElementById('result');
+      result.style.display = 'block';
+
+      document.getElementById('res-advertiser').textContent = data.advertiser_id;
+      document.getElementById('res-price').textContent = '$' + data.price.toFixed(4);
+      document.getElementById('res-geo').textContent = geo;
+      document.getElementById('res-format').textContent = format;
+
+      const now = new Date();
+      document.getElementById('res-time').textContent =
+        now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      history.unshift({ advertiser: data.advertiser_id, price: data.price, geo, format });
+      if (history.length > 20) history.pop();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const tbody = document.getElementById('historyBody');
+      tbody.innerHTML = history.map(h => `
+        <tr>
+          <td>${h.advertiser}</td>
+          <td>$${h.price.toFixed(4)}</td>
+          <td><span class="tag">${h.geo}</span></td>
+          <td><span class="tag">${h.format}</span></td>
+        </tr>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
