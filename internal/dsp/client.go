@@ -2,6 +2,7 @@ package dsp
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"google.golang.org/grpc"
@@ -23,11 +24,12 @@ func NewGRPCClient(addr string) (*GRPCClient, error) {
 	return &GRPCClient{addr: addr, client: pb.NewAuctionClient(conn)}, nil
 }
 
-func (c *GRPCClient) Bid(geo, format string) (Bid, bool) {
+func (c *GRPCClient) Bid(geo, format string, floor float64) (Bid, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	resp, err := c.client.RunAuction(ctx, &pb.BidRequest{Geo: geo, Format: format})
+	resp, err := c.client.RunAuction(ctx, &pb.BidRequest{Geo: geo, Format: format, FloorPrice: floor})
 	if err != nil {
+		log.Printf("DSP %s error: %v", c.addr, err)
 		return Bid{}, false
 	}
 	return Bid{AdvertiserID: resp.AdvertiserId, Price: resp.Price}, true

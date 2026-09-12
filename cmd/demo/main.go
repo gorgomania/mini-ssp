@@ -33,14 +33,14 @@ type dspServer struct {
 }
 
 func (s *dspServer) RunAuction(_ context.Context, req *pb.BidRequest) (*pb.BidResponse, error) {
-	price := s.basePrice + rand.Float64()*s.basePrice*0.5
+	premium := s.basePrice + rand.Float64()*s.basePrice*0.5
 	if s.boostGeo != "" && req.Geo == s.boostGeo {
-		price = s.boostPrice + rand.Float64()*s.boostPrice*0.5
+		premium = s.boostPrice + rand.Float64()*s.boostPrice*0.5
 	}
-	return &pb.BidResponse{AdvertiserId: s.name, Price: price}, nil
+	return &pb.BidResponse{AdvertiserId: s.name, Price: req.FloorPrice + premium}, nil
 }
 
-func startDSP(name, addr string, basePrice float64, boostGeo string, boostPrice float64) {
+func startDSP(name, addr string, basePrice float64, boostGeo string, boostPrice float64, ready chan<- struct{}) {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("DSP %s listen: %v", name, err)
@@ -51,6 +51,7 @@ func startDSP(name, addr string, basePrice float64, boostGeo string, boostPrice 
 	})
 	reflection.Register(s)
 	log.Printf("DSP %-10s on %s", name, addr)
+	ready <- struct{}{}
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("DSP %s serve: %v", name, err)
 	}
@@ -84,7 +85,7 @@ func makeBidHandler(dsps []dsp.DSP) http.HandlerFunc {
 		for _, d := range dsps {
 			go func() {
 				defer wg.Done()
-				if b, ok := d.Bid(req.Geo, req.Format); ok {
+				if b, ok := d.Bid(req.Geo, req.Format, req.FloorPrice); ok {
 					mu.Lock()
 					bids = append(bids, b)
 					mu.Unlock()
@@ -123,12 +124,18 @@ var dspConfigs = []struct {
 	{"adcorp", ":50051", 0.5, "US", 2.0},
 	{"medianet", ":50052", 0.4, "EU", 1.8},
 	{"quickads", ":50053", 1.0, "", 0},
+	{"ruads", ":50054", 0.3, "RU", 1.2},
+	{"apacads", ":50055", 0.3, "JP", 1.5},
+	{"latamads", ":50056", 0.25, "BR", 1.0},
 }
 
 func main() {
+	ready := make(chan struct{}, len(dspConfigs))
 	for _, cfg := range dspConfigs {
-		cfg := cfg
-		go startDSP(cfg.name, cfg.addr, cfg.basePrice, cfg.boostGeo, cfg.boostPrice)
+		go startDSP(cfg.name, cfg.addr, cfg.basePrice, cfg.boostGeo, cfg.boostPrice, ready)
+	}
+	for range dspConfigs {
+		<-ready
 	}
 
 	var dsps []dsp.DSP

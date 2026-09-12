@@ -25,6 +25,7 @@ type BidRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Geo           string                 `protobuf:"bytes,1,opt,name=geo,proto3" json:"geo,omitempty"`
 	Format        string                 `protobuf:"bytes,2,opt,name=format,proto3" json:"format,omitempty"`
+	FloorPrice    float64                `protobuf:"fixed64,3,opt,name=floor_price,json=floorPrice,proto3" json:"floor_price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -71,6 +72,13 @@ func (x *BidRequest) GetFormat() string {
 		return x.Format
 	}
 	return ""
+}
+
+func (x *BidRequest) GetFloorPrice() float64 {
+	if x != nil {
+		return x.FloorPrice
+	}
+	return 0
 }
 
 type BidResponse struct {
@@ -129,11 +137,13 @@ var File_proto_auction_proto protoreflect.FileDescriptor
 
 const file_proto_auction_proto_rawDesc = "" +
 	"\n" +
-	"\x13proto/auction.proto\x12\aauction\"6\n" +
+	"\x13proto/auction.proto\x12\aauction\"W\n" +
 	"\n" +
 	"BidRequest\x12\x10\n" +
 	"\x03geo\x18\x01 \x01(\tR\x03geo\x12\x16\n" +
-	"\x06format\x18\x02 \x01(\tR\x06format\"H\n" +
+	"\x06format\x18\x02 \x01(\tR\x06format\x12\x1f\n" +
+	"\vfloor_price\x18\x03 \x01(\x01R\n" +
+	"floorPrice\"H\n" +
 	"\vBidResponse\x12#\n" +
 	"\radvertiser_id\x18\x01 \x01(\tR\fadvertiserId\x12\x14\n" +
 	"\x05price\x18\x02 \x01(\x01R\x05price2B\n" +

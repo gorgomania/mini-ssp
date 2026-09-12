@@ -43,7 +43,7 @@ func makeBidHandler(dsps []dsp.DSP) http.HandlerFunc {
 		for _, d := range dsps {
 			go func() {
 				defer wg.Done()
-				if b, ok := d.Bid(req.Geo, req.Format); ok {
+				if b, ok := d.Bid(req.Geo, req.Format, req.FloorPrice); ok {
 					mu.Lock()
 					bids = append(bids, b)
 					mu.Unlock()
