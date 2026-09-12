@@ -3,19 +3,18 @@ package main
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"io/fs"
-	"log"
+	"log/slog"
 	"math/rand"
 	"net"
 	"net/http"
-	"sync"
+	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/gorgomania/mini-ssp/internal/auction"
 	"github.com/gorgomania/mini-ssp/internal/dsp"
+	"github.com/gorgomania/mini-ssp/internal/ssp"
 	pb "github.com/gorgomania/mini-ssp/proto"
 )
 
@@ -43,72 +42,19 @@ func (s *dspServer) RunAuction(_ context.Context, req *pb.BidRequest) (*pb.BidRe
 func startDSP(name, addr string, basePrice float64, boostGeo string, boostPrice float64, ready chan<- struct{}) {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("DSP %s listen: %v", name, err)
+		slog.Error("DSP listen failed", "name", name, "err", err)
+		os.Exit(1)
 	}
 	s := grpc.NewServer()
 	pb.RegisterAuctionServer(s, &dspServer{
 		name: name, basePrice: basePrice, boostGeo: boostGeo, boostPrice: boostPrice,
 	})
 	reflection.Register(s)
-	log.Printf("DSP %-10s on %s", name, addr)
+	slog.Info("DSP started", "name", name, "addr", addr)
 	ready <- struct{}{}
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("DSP %s serve: %v", name, err)
-	}
-}
-
-// ── SSP HTTP server ──────────────────────────────────────────────────────────
-
-type bidRequest struct {
-	Geo        string  `json:"geo"`
-	Format     string  `json:"format"`
-	FloorPrice float64 `json:"floor_price"`
-}
-
-type bidResponse struct {
-	AdvertiserID string  `json:"advertiser_id"`
-	Price        float64 `json:"price"`
-}
-
-func makeBidHandler(dsps []dsp.DSP) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var req bidRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
-			return
-		}
-
-		var mu sync.Mutex
-		var bids []dsp.Bid
-		var wg sync.WaitGroup
-		wg.Add(len(dsps))
-		for _, d := range dsps {
-			go func() {
-				defer wg.Done()
-				if b, ok := d.Bid(req.Geo, req.Format, req.FloorPrice); ok {
-					mu.Lock()
-					bids = append(bids, b)
-					mu.Unlock()
-				}
-			}()
-		}
-		wg.Wait()
-
-		winner, clearingPrice, ok := auction.SecondPrice(bids, req.FloorPrice)
-		if !ok {
-			log.Printf("no bids geo=%s format=%s", req.Geo, req.Format)
-			http.Error(w, "no bids", http.StatusNoContent)
-			return
-		}
-
-		log.Printf("auction geo=%s format=%s winner=%s bid=%.3f clearing=%.3f",
-			req.Geo, req.Format, winner.AdvertiserID, winner.Price, clearingPrice)
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(bidResponse{
-			AdvertiserID: winner.AdvertiserID,
-			Price:        clearingPrice,
-		})
+		slog.Error("DSP serve failed", "name", name, "err", err)
+		os.Exit(1)
 	}
 }
 
@@ -130,6 +76,8 @@ var dspConfigs = []struct {
 }
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	ready := make(chan struct{}, len(dspConfigs))
 	for _, cfg := range dspConfigs {
 		go startDSP(cfg.name, cfg.addr, cfg.basePrice, cfg.boostGeo, cfg.boostPrice, ready)
@@ -142,15 +90,19 @@ func main() {
 	for _, cfg := range dspConfigs {
 		c, err := dsp.NewGRPCClient("localhost" + cfg.addr)
 		if err != nil {
-			log.Fatalf("connect DSP %s: %v", cfg.name, err)
+			slog.Error("connect DSP failed", "name", cfg.name, "err", err)
+			os.Exit(1)
 		}
 		dsps = append(dsps, c)
 	}
 
 	static, _ := fs.Sub(webFS, "web")
 	http.Handle("/", http.FileServer(http.FS(static)))
-	http.HandleFunc("/bid", makeBidHandler(dsps))
+	http.HandleFunc("/bid", ssp.BidHandler(dsps))
 
-	log.Println("SSP demo → http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	slog.Info("SSP demo", "url", "http://localhost:8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		slog.Error("server error", "err", err)
+		os.Exit(1)
+	}
 }
