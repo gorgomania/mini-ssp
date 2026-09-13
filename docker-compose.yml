@@ -23,6 +23,11 @@ services:
     build: { context: ., target: dsp }
     command: ["-name", "latamads", "-port", "50051", "-boost-geo", "BR", "-boost-price", "1.0"]
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
   ssp:
     build: { context: ., target: ssp }
     ports:
@@ -30,6 +35,12 @@ services:
     command:
       - "-dsps"
       - "dsp-adcorp:50051,dsp-medianet:50051,dsp-quickads:50051,dsp-ruads:50051,dsp-apacads:50051,dsp-latamads:50051"
+      - "-redis"
+      - "redis:6379"
+      - "-freqcap-limit"
+      - "3"
+      - "-freqcap-window"
+      - "1h"
     depends_on:
       - dsp-adcorp
       - dsp-medianet
@@ -37,6 +48,7 @@ services:
       - dsp-ruads
       - dsp-apacads
       - dsp-latamads
+      - redis
 
   prometheus:
     image: prom/prometheus

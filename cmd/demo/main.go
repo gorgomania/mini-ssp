@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"github.com/gorgomania/mini-ssp/internal/dsp"
+	"github.com/gorgomania/mini-ssp/internal/freqcap"
 	"github.com/gorgomania/mini-ssp/internal/ssp"
 	pb "github.com/gorgomania/mini-ssp/proto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -99,7 +100,7 @@ func main() {
 
 	static, _ := fs.Sub(webFS, "web")
 	http.Handle("/", http.FileServer(http.FS(static)))
-	http.HandleFunc("/bid", ssp.BidHandler(dsps))
+	http.HandleFunc("/bid", ssp.BidHandler(dsps, freqcap.NoopCapper{}))
 	http.Handle("/metrics", promhttp.Handler())
 
 	slog.Info("SSP demo", "url", "http://localhost:8080")

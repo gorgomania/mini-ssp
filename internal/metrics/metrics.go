@@ -27,4 +27,9 @@ var (
 		Name: "ssp_winner_bids_total",
 		Help: "Auctions won per DSP",
 	}, []string{"advertiser_id"})
+
+	FreqCapFiltered = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "ssp_freqcap_filtered_total",
+		Help: "Bids filtered by frequency cap",
+	}, []string{"advertiser_id"})
 )

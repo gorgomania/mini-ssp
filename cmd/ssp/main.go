@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gorgomania/mini-ssp/internal/dsp"
+	"github.com/gorgomania/mini-ssp/internal/freqcap"
 	"github.com/gorgomania/mini-ssp/internal/ssp"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -22,6 +24,9 @@ func main() {
 
 	dspAddrs := flag.String("dsps", "localhost:50051,localhost:50052,localhost:50053", "comma-separated DSP gRPC addresses")
 	port := flag.String("port", "8080", "HTTP listen port")
+	redisAddr := flag.String("redis", "", "Redis address for frequency capping (empty = disabled)")
+	capLimit := flag.Int64("freqcap-limit", 3, "max impressions per user per advertiser per window")
+	capWindow := flag.Duration("freqcap-window", time.Hour, "frequency cap time window")
 	flag.Parse()
 
 	var dsps []dsp.DSP
@@ -39,9 +44,20 @@ func main() {
 		dsps = append(dsps, c)
 	}
 
+	var capper freqcap.Capper = freqcap.NoopCapper{}
+	if *redisAddr != "" {
+		rc, err := freqcap.NewRedisCapper(*redisAddr, *capLimit, *capWindow)
+		if err != nil {
+			slog.Error("Redis connect failed", "addr", *redisAddr, "err", err)
+			os.Exit(1)
+		}
+		slog.Info("frequency capping enabled", "redis", *redisAddr, "limit", *capLimit, "window", *capWindow)
+		capper = rc
+	}
+
 	static, _ := fs.Sub(webFS, "web")
 	http.Handle("/", http.FileServer(http.FS(static)))
-	http.HandleFunc("/bid", ssp.BidHandler(dsps))
+	http.HandleFunc("/bid", ssp.BidHandler(dsps, capper))
 	http.Handle("/metrics", promhttp.Handler())
 	slog.Info("SSP HTTP listening", "port", *port)
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {
