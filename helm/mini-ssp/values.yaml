@@ -71,6 +71,11 @@ consumer:
     requests: { cpu: 50m,  memory: 64Mi }
     limits:   { cpu: 200m, memory: 256Mi }
 
+prometheusRule:
+  enabled: false
+  p99ThresholdSeconds: 0.2
+  noBidRateThreshold: 0.5
+
 ingress:
   enabled: false
   className: nginx

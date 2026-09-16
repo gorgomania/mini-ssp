@@ -47,13 +47,13 @@ spec:
           resources: {{ toYaml .Values.ssp.resources | nindent 12 }}
           readinessProbe:
             httpGet:
-              path: /metrics
+              path: /healthz
               port: {{ .Values.ssp.port }}
             initialDelaySeconds: 5
             periodSeconds: 5
           livenessProbe:
             httpGet:
-              path: /metrics
+              path: /healthz
               port: {{ .Values.ssp.port }}
             initialDelaySeconds: 15
             periodSeconds: 30

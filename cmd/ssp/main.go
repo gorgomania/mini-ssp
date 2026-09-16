@@ -22,6 +22,7 @@ import (
 	"github.com/gorgomania/mini-ssp/internal/ssp"
 	"github.com/gorgomania/mini-ssp/internal/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	_ "go.uber.org/automaxprocs"
 )
 
 //go:embed web
@@ -138,6 +139,9 @@ func run() error {
 	}
 	mux.Handle("/bid", bidHandler)
 	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
 
 	srv := &http.Server{Addr: ":" + *port, Handler: mux}
 

@@ -1,0 +1,46 @@
+{{- if .Values.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: ssp-sla
+  namespace: {{ .Release.Namespace }}
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: ssp.sla
+      interval: 30s
+      rules:
+        - alert: SSPHighP99Latency
+          expr: |
+            histogram_quantile(0.99,
+              rate(ssp_auction_duration_seconds_bucket[5m])
+            ) > {{ .Values.prometheusRule.p99ThresholdSeconds }}
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SSP p99 latency above {{ .Values.prometheusRule.p99ThresholdSeconds }}s"
+            description: "p99 auction latency is {{ "{{" }} $value | humanizeDuration {{ "}}" }}"
+
+        - alert: SSPHighErrorRate
+          expr: |
+            rate(ssp_bids_total{result="no_bid"}[5m])
+              / rate(ssp_bids_total[5m]) > {{ .Values.prometheusRule.noBidRateThreshold }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SSP no-bid rate above {{ .Values.prometheusRule.noBidRateThreshold | mul 100 }}%"
+            description: "no-bid rate is {{ "{{" }} $value | humanizePercentage {{ "}}" }}"
+
+        - alert: SSPKafkaErrors
+          expr: rate(ssp_kafka_publish_errors_total[5m]) > 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "SSP Kafka publish errors"
+            description: "{{ "{{" }} $value | humanize {{ "}}" }} Kafka errors/sec"
+{{- end }}
