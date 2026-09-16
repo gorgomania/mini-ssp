@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: consumer
-  namespace: ssp
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
@@ -15,21 +15,17 @@ spec:
     spec:
       containers:
         - name: consumer
-          image: mini-ssp-consumer:latest
-          imagePullPolicy: IfNotPresent
+          image: {{ .Values.image.consumer }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - "-kafka"
             - "kafka:9092"
             - "-clickhouse"
             - "clickhouse:9000"
+            - "-topic"
+            - {{ .Values.consumer.topic | quote }}
             - "-metrics-port"
-            - "9091"
+            - {{ .Values.consumer.metricsPort | quote }}
           ports:
-            - containerPort: 9091
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 256Mi
+            - containerPort: {{ .Values.consumer.metricsPort }}
+          resources: {{ toYaml .Values.consumer.resources | nindent 12 }}

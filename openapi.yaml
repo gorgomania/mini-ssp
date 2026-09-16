@@ -1,0 +1,89 @@
+openapi: "3.0.3"
+info:
+  title: mini-ssp
+  description: Minimal Supply-Side Platform — runs a second-price auction across DSPs
+  version: "1.0.0"
+
+servers:
+  - url: http://localhost:8080
+    description: Local / Docker Compose
+
+paths:
+  /bid:
+    post:
+      summary: Submit a bid request
+      description: |
+        Fans out to all registered DSPs in parallel, runs a Vickrey (second-price)
+        auction, applies frequency capping, and returns the winner.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BidRequest'
+            example:
+              user_id: "u42"
+              geo: "US"
+              format: "banner"
+              floor_price: 0.5
+      responses:
+        '200':
+          description: Auction winner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BidResponse'
+              example:
+                advertiser_id: "adcorp"
+                price: 1.80
+        '204':
+          description: No eligible bids (all below floor or all capped)
+        '400':
+          description: Malformed request body
+        '429':
+          description: Rate limit exceeded
+
+  /metrics:
+    get:
+      summary: Prometheus metrics
+      description: Exposes ssp_* metrics for scraping.
+      responses:
+        '200':
+          description: Prometheus text format
+
+components:
+  schemas:
+    BidRequest:
+      type: object
+      required: [geo, format]
+      properties:
+        user_id:
+          type: string
+          description: Opaque user identifier used for frequency capping. Omit to skip capping.
+          example: "u42"
+        geo:
+          type: string
+          description: Two-letter geo code passed to DSPs.
+          example: "US"
+        format:
+          type: string
+          description: Ad format passed to DSPs (e.g. banner, video).
+          example: "banner"
+        floor_price:
+          type: number
+          format: double
+          description: Minimum acceptable bid price. Bids below this are rejected.
+          example: 0.5
+
+    BidResponse:
+      type: object
+      properties:
+        advertiser_id:
+          type: string
+          description: Winner's advertiser identifier.
+          example: "adcorp"
+        price:
+          type: number
+          format: double
+          description: Clearing price (second-highest bid or floor, whichever is greater).
+          example: 1.80

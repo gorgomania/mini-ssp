@@ -1,0 +1,67 @@
+{{- range .Values.dsps }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsp-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsp-{{ .name }}
+  template:
+    metadata:
+      labels:
+        app: dsp-{{ .name }}
+    spec:
+      containers:
+        - name: dsp
+          image: {{ $.Values.image.dsp }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args:
+            - "-name"
+            - {{ .name | quote }}
+            - "-port"
+            - "50051"
+            {{- if .boostGeo }}
+            - "-boost-geo"
+            - {{ .boostGeo | quote }}
+            - "-boost-price"
+            - {{ .boostPrice | quote }}
+            {{- end }}
+            {{- if .basePrice }}
+            - "-base-price"
+            - {{ .basePrice | quote }}
+            {{- end }}
+          ports:
+            - containerPort: 50051
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsp-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  selector:
+    app: dsp-{{ .name }}
+  ports:
+    - port: 50051
+{{- end }}

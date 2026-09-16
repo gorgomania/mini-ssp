@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -13,6 +14,9 @@ import (
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gorgomania/mini-ssp/internal/events"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -21,19 +25,41 @@ const (
 	flushInterval = 5 * time.Second
 )
 
+var (
+	eventsProcessed = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "consumer_events_processed_total",
+		Help: "Total auction events written to ClickHouse",
+	})
+	batchesDropped = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "consumer_batches_dropped_total",
+		Help: "Batches dropped after exhausting retries",
+	})
+	flushDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "consumer_flush_duration_seconds",
+		Help:    "Time to flush a batch to ClickHouse",
+		Buckets: []float64{.01, .05, .1, .25, .5, 1, 2, 5},
+	})
+	batchSizeHist = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "consumer_batch_size",
+		Help:    "Number of events per ClickHouse batch",
+		Buckets: []float64{1, 10, 50, 100, 250, 500, 1000},
+	})
+)
+
 func main() {
-	kafkaAddr := flag.String("kafka", "localhost:9092", "comma-separated Kafka brokers")
-	topic := flag.String("topic", "auction.events", "Kafka topic")
-	chAddr := flag.String("clickhouse", "localhost:9000", "ClickHouse native address")
+	kafkaAddr  := flag.String("kafka", "localhost:9092", "comma-separated Kafka brokers")
+	topic      := flag.String("topic", "auction.events", "Kafka topic")
+	chAddr     := flag.String("clickhouse", "localhost:9000", "ClickHouse native address")
+	metricsPort := flag.String("metrics-port", "9091", "Prometheus metrics port")
 	flag.Parse()
 
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{*chAddr},
-		Auth: clickhouse.Auth{Database: "default"},
-		DialTimeout:     10 * time.Second,
-		MaxOpenConns:    2,
+		Addr:         []string{*chAddr},
+		Auth:         clickhouse.Auth{Database: "default"},
+		DialTimeout:  10 * time.Second,
+		MaxOpenConns: 2,
 	})
 	if err != nil {
 		slog.Error("clickhouse open failed", "err", err)
@@ -56,6 +82,17 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	// metrics HTTP server
+	go func() {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		srv := &http.Server{Addr: ":" + *metricsPort, Handler: mux}
+		slog.Info("consumer metrics listening", "port", *metricsPort)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Warn("metrics server error", "err", err)
+		}
+	}()
 
 	slog.Info("consumer started", "kafka", *kafkaAddr, "topic", *topic)
 
@@ -89,18 +126,23 @@ func main() {
 		if len(batch) == 0 {
 			return
 		}
+		batchSizeHist.Observe(float64(len(batch)))
 		const maxAttempts = 3
 		for attempt := range maxAttempts {
+			t0 := time.Now()
 			if err := insert(ctx, conn, batch); err != nil {
 				slog.Warn("clickhouse insert failed", "attempt", attempt+1, "rows", len(batch), "err", err)
 				time.Sleep(time.Duration(attempt+1) * time.Second)
 				continue
 			}
+			flushDuration.Observe(time.Since(t0).Seconds())
+			eventsProcessed.Add(float64(len(batch)))
 			slog.Info("flushed", "rows", len(batch))
 			batch = batch[:0]
 			return
 		}
 		slog.Error("clickhouse insert failed after retries, dropping batch", "rows", len(batch))
+		batchesDropped.Inc()
 		batch = batch[:0]
 	}
 

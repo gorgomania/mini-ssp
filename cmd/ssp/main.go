@@ -18,6 +18,7 @@ import (
 	"github.com/gorgomania/mini-ssp/internal/dsp"
 	"github.com/gorgomania/mini-ssp/internal/events"
 	"github.com/gorgomania/mini-ssp/internal/freqcap"
+	"github.com/gorgomania/mini-ssp/internal/middleware"
 	"github.com/gorgomania/mini-ssp/internal/ssp"
 	"github.com/gorgomania/mini-ssp/internal/store"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -43,6 +44,8 @@ func run() error {
 	kafkaBrokers := flag.String("kafka", "", "comma-separated Kafka brokers (empty = disabled)")
 	kafkaTopic   := flag.String("kafka-topic", "auction.events", "Kafka topic for auction events")
 	postgresDSN  := flag.String("postgres", "", "PostgreSQL DSN for DSP config and freqcap rules")
+	rateLimit    := flag.Float64("rate-limit", 0, "max requests/sec on /bid (0 = disabled)")
+	rateBurst    := flag.Int("rate-burst", 10, "burst size for rate limiter")
 	flag.Parse()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -127,7 +130,13 @@ func run() error {
 	mux := http.NewServeMux()
 	static, _ := fs.Sub(webFS, "web")
 	mux.Handle("/", http.FileServer(http.FS(static)))
-	mux.HandleFunc("/bid", ssp.BidHandler(dsps, capper, pub))
+
+	bidHandler := http.Handler(http.HandlerFunc(ssp.BidHandler(dsps, capper, pub)))
+	if *rateLimit > 0 {
+		bidHandler = middleware.RateLimit(*rateLimit, *rateBurst)(bidHandler)
+		slog.Info("rate limiting enabled", "rps", *rateLimit, "burst", *rateBurst)
+	}
+	mux.Handle("/bid", bidHandler)
 	mux.Handle("/metrics", promhttp.Handler())
 
 	srv := &http.Server{Addr: ":" + *port, Handler: mux}

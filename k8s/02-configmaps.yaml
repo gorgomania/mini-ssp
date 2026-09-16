@@ -67,6 +67,9 @@ data:
       - job_name: ssp
         static_configs:
           - targets: ['ssp:8080']
+      - job_name: consumer
+        static_configs:
+          - targets: ['consumer:9091']
 ---
 apiVersion: v1
 kind: ConfigMap

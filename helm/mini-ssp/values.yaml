@@ -1,0 +1,87 @@
+image:
+  ssp:      mini-ssp-ssp:latest
+  dsp:      mini-ssp-dsp:latest
+  consumer: mini-ssp-consumer:latest
+  pullPolicy: IfNotPresent
+
+ssp:
+  replicas: 2
+  port: 8080
+  rateLimit: 0       # rps, 0 = disabled
+  rateBurst: 10
+  nodePort: 30080
+  resources:
+    requests: { cpu: 100m, memory: 64Mi }
+    limits:   { cpu: 500m, memory: 256Mi }
+
+freqcap:
+  limit: 3
+  window: 1h
+
+dsps:
+  - name: adcorp
+    boostGeo: US
+    boostPrice: "2.0"
+  - name: medianet
+    boostGeo: EU
+    boostPrice: "1.8"
+  - name: quickads
+    basePrice: "1.0"
+  - name: ruads
+    boostGeo: RU
+    boostPrice: "1.2"
+  - name: apacads
+    boostGeo: JP
+    boostPrice: "1.5"
+  - name: latamads
+    boostGeo: BR
+    boostPrice: "1.0"
+
+redis:
+  image: redis:7-alpine
+  resources:
+    requests: { cpu: 50m,  memory: 64Mi }
+    limits:   { cpu: 300m, memory: 256Mi }
+
+postgres:
+  image: postgres:16-alpine
+  database: ssp
+  username: ssp
+  password: ssp
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
+
+kafka:
+  image: bitnami/kafka:3.9
+  resources:
+    requests: { cpu: 200m, memory: 512Mi }
+    limits:   { cpu: 1000m, memory: 1Gi }
+
+clickhouse:
+  image: clickhouse/clickhouse-server:24
+  resources:
+    requests: { cpu: 200m, memory: 512Mi }
+    limits:   { cpu: 1000m, memory: 2Gi }
+
+consumer:
+  topic: auction.events
+  metricsPort: 9091
+  resources:
+    requests: { cpu: 50m,  memory: 64Mi }
+    limits:   { cpu: 200m, memory: 256Mi }
+
+prometheus:
+  image: prom/prometheus
+  nodePort: 30090
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 500m, memory: 1Gi }
+
+grafana:
+  image: grafana/grafana
+  adminPassword: admin
+  nodePort: 30300
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits:   { cpu: 500m, memory: 512Mi }
