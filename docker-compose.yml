@@ -95,6 +95,8 @@ services:
       - "1h"
       - "-kafka"
       - "kafka:9092"
+      - "-postgres"
+      - "postgres://ssp:ssp@postgres:5432/ssp"
     depends_on:
       dsp-adcorp:
         condition: service_healthy
@@ -112,6 +114,22 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=ssp
+      - POSTGRES_USER=ssp
+      - POSTGRES_PASSWORD=ssp
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ssp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   clickhouse:
     image: clickhouse/clickhouse-server:24
