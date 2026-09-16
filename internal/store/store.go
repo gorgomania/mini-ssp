@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type DSPConfig struct {
@@ -19,23 +19,27 @@ type FreqCapRule struct {
 }
 
 type Store struct {
-	conn *pgx.Conn
+	pool *pgxpool.Pool
 }
 
 func New(ctx context.Context, dsn string) (*Store, error) {
-	conn, err := pgx.Connect(ctx, dsn)
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}
-	return &Store{conn: conn}, nil
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	return &Store{pool: pool}, nil
 }
 
-func (s *Store) Close(ctx context.Context) error {
-	return s.conn.Close(ctx)
+func (s *Store) Close(_ context.Context) {
+	s.pool.Close()
 }
 
 func (s *Store) ActiveDSPs(ctx context.Context) ([]DSPConfig, error) {
-	rows, err := s.conn.Query(ctx,
+	rows, err := s.pool.Query(ctx,
 		`SELECT name, grpc_addr FROM dsps WHERE active = TRUE ORDER BY name`)
 	if err != nil {
 		return nil, err
@@ -54,7 +58,7 @@ func (s *Store) ActiveDSPs(ctx context.Context) ([]DSPConfig, error) {
 }
 
 func (s *Store) FreqCapRules(ctx context.Context) ([]FreqCapRule, error) {
-	rows, err := s.conn.Query(ctx,
+	rows, err := s.pool.Query(ctx,
 		`SELECT advertiser_id, cap_limit, window_secs FROM freqcap_rules`)
 	if err != nil {
 		return nil, err

@@ -3,7 +3,6 @@ package dsp
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -24,9 +23,7 @@ func NewGRPCClient(addr string) (*GRPCClient, error) {
 	return &GRPCClient{addr: addr, client: pb.NewAuctionClient(conn)}, nil
 }
 
-func (c *GRPCClient) Bid(geo, format string, floor float64) (Bid, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
+func (c *GRPCClient) Bid(ctx context.Context, geo, format string, floor float64) (Bid, bool) {
 	resp, err := c.client.RunAuction(ctx, &pb.BidRequest{Geo: geo, Format: format, FloorPrice: floor})
 	if err != nil {
 		slog.Error("DSP call failed", "addr", c.addr, "err", err)

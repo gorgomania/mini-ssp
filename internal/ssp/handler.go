@@ -37,6 +37,9 @@ func BidHandler(dsps []dsp.DSP, capper freqcap.Capper, pub events.Publisher) htt
 			return
 		}
 
+		bidCtx, cancel := context.WithTimeout(r.Context(), 150*time.Millisecond)
+		defer cancel()
+
 		var mu sync.Mutex
 		var bids []dsp.Bid
 		var wg sync.WaitGroup
@@ -44,7 +47,7 @@ func BidHandler(dsps []dsp.DSP, capper freqcap.Capper, pub events.Publisher) htt
 		for _, d := range dsps {
 			go func() {
 				defer wg.Done()
-				if b, ok := d.Bid(req.Geo, req.Format, req.FloorPrice); ok {
+				if b, ok := d.Bid(bidCtx, req.Geo, req.Format, req.FloorPrice); ok {
 					mu.Lock()
 					bids = append(bids, b)
 					mu.Unlock()

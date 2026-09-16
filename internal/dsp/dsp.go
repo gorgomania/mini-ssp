@@ -1,6 +1,9 @@
 package dsp
 
-import "math/rand"
+import (
+	"context"
+	"math/rand"
+)
 
 type Bid struct {
 	AdvertiserID string
@@ -8,13 +11,13 @@ type Bid struct {
 }
 
 type DSP interface {
-	Bid(geo, format string, floor float64) (Bid, bool)
+	Bid(ctx context.Context, geo, format string, floor float64) (Bid, bool)
 }
 
 // AdCorp bids high on US traffic
 type AdCorp struct{}
 
-func (d AdCorp) Bid(geo, format string, floor float64) (Bid, bool) {
+func (d AdCorp) Bid(_ context.Context, geo, format string, floor float64) (Bid, bool) {
 	premium := 0.5 + rand.Float64()*0.5
 	if geo == "US" {
 		premium = 2.0 + rand.Float64()*1.5
@@ -25,7 +28,7 @@ func (d AdCorp) Bid(geo, format string, floor float64) (Bid, bool) {
 // MediaNet bids high on EU traffic
 type MediaNet struct{}
 
-func (d MediaNet) Bid(geo, format string, floor float64) (Bid, bool) {
+func (d MediaNet) Bid(_ context.Context, geo, format string, floor float64) (Bid, bool) {
 	premium := 0.4 + rand.Float64()*0.4
 	if geo == "EU" {
 		premium = 1.8 + rand.Float64()*1.2
@@ -36,7 +39,7 @@ func (d MediaNet) Bid(geo, format string, floor float64) (Bid, bool) {
 // QuickAds always bids a flat rate, but passes on video
 type QuickAds struct{}
 
-func (d QuickAds) Bid(geo, format string, floor float64) (Bid, bool) {
+func (d QuickAds) Bid(_ context.Context, geo, format string, floor float64) (Bid, bool) {
 	if format == "video" {
 		return Bid{}, false
 	}

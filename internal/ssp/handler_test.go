@@ -22,7 +22,7 @@ type fixedDSP struct {
 	ok      bool
 }
 
-func (d fixedDSP) Bid(_, _ string, floor float64) (dsp.Bid, bool) {
+func (d fixedDSP) Bid(_ context.Context, _, _ string, floor float64) (dsp.Bid, bool) {
 	if !d.ok {
 		return dsp.Bid{}, false
 	}

@@ -21,7 +21,7 @@ func New(dsps []dsp.DSP) *AuctionServer {
 func (s *AuctionServer) RunAuction(ctx context.Context, req *pb.BidRequest) (*pb.BidResponse, error) {
 	var bids []dsp.Bid
 	for _, d := range s.dsps {
-		if b, ok := d.Bid(req.Geo, req.Format, 0); ok {
+		if b, ok := d.Bid(ctx, req.Geo, req.Format, 0); ok {
 			bids = append(bids, b)
 		}
 	}
