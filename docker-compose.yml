@@ -113,6 +113,33 @@ services:
       kafka:
         condition: service_healthy
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:24
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
+  consumer:
+    build: { context: ., target: consumer }
+    command:
+      - "-kafka"
+      - "kafka:9092"
+      - "-clickhouse"
+      - "clickhouse:9000"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+
   prometheus:
     image: prom/prometheus
     volumes:

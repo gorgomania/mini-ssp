@@ -5,6 +5,7 @@ RUN go mod download
 COPY . .
 RUN go build -o /bin/ssp ./cmd/ssp/
 RUN go build -o /bin/dsp ./cmd/dsp/
+RUN go build -o /bin/consumer ./cmd/consumer/
 
 FROM alpine:latest AS ssp
 COPY --from=builder /bin/ssp /ssp
@@ -15,3 +16,7 @@ FROM alpine:latest AS dsp
 COPY --from=builder /bin/dsp /dsp
 EXPOSE 50051
 ENTRYPOINT ["/dsp"]
+
+FROM alpine:latest AS consumer
+COPY --from=builder /bin/consumer /consumer
+ENTRYPOINT ["/consumer"]
