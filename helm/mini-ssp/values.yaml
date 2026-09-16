@@ -71,6 +71,15 @@ consumer:
     requests: { cpu: 50m,  memory: 64Mi }
     limits:   { cpu: 200m, memory: 256Mi }
 
+ingress:
+  enabled: false
+  className: nginx
+  host: ssp.local
+  grafanaHost: grafana.local
+  tls: false
+  tlsSecret: ssp-tls
+  annotations: {}
+
 prometheus:
   image: prom/prometheus
   nodePort: 30090

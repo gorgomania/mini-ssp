@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/segmentio/kafka-go"
@@ -27,8 +28,13 @@ type NoopPublisher struct{}
 func (NoopPublisher) Publish(_ context.Context, _ AuctionEvent) error { return nil }
 func (NoopPublisher) Close() error                                     { return nil }
 
+// maxKafkaConcurrency bounds the number of in-flight Kafka writes.
+// Exceeding this drops the event and returns an error counted by the caller.
+const maxKafkaConcurrency = 256
+
 type KafkaPublisher struct {
 	writer *kafka.Writer
+	sem    chan struct{}
 }
 
 func NewKafkaPublisher(brokers []string, topic string) *KafkaPublisher {
@@ -39,10 +45,18 @@ func NewKafkaPublisher(brokers []string, topic string) *KafkaPublisher {
 			Balancer:               &kafka.LeastBytes{},
 			AllowAutoTopicCreation: true,
 		},
+		sem: make(chan struct{}, maxKafkaConcurrency),
 	}
 }
 
 func (p *KafkaPublisher) Publish(ctx context.Context, e AuctionEvent) error {
+	select {
+	case p.sem <- struct{}{}:
+	default:
+		return errors.New("kafka publish queue full")
+	}
+	defer func() { <-p.sem }()
+
 	b, err := json.Marshal(e)
 	if err != nil {
 		return err
