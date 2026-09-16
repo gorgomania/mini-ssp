@@ -81,6 +81,16 @@ data:
         type: prometheus
         url: http://prometheus:9090
         isDefault: true
+  clickhouse.yml: |
+    apiVersion: 1
+    datasources:
+      - name: ClickHouse
+        type: grafana-clickhouse-datasource
+        jsonData:
+          host: clickhouse
+          port: 9000
+          protocol: native
+          defaultDatabase: default
 ---
 apiVersion: v1
 kind: ConfigMap

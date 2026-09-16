@@ -20,6 +20,23 @@ spec:
           args: ["-name", "adcorp", "-port", "50051", "-boost-geo", "US", "-boost-price", "2.0"]
           ports:
             - containerPort: 50051
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
@@ -54,6 +71,23 @@ spec:
           args: ["-name", "medianet", "-port", "50051", "-boost-geo", "EU", "-boost-price", "1.8"]
           ports:
             - containerPort: 50051
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
@@ -88,6 +122,23 @@ spec:
           args: ["-name", "quickads", "-port", "50051", "-base-price", "1.0"]
           ports:
             - containerPort: 50051
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
@@ -122,6 +173,23 @@ spec:
           args: ["-name", "ruads", "-port", "50051", "-boost-geo", "RU", "-boost-price", "1.2"]
           ports:
             - containerPort: 50051
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
@@ -156,6 +224,23 @@ spec:
           args: ["-name", "apacads", "-port", "50051", "-boost-geo", "JP", "-boost-price", "1.5"]
           ports:
             - containerPort: 50051
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
@@ -190,6 +275,23 @@ spec:
           args: ["-name", "latamads", "-port", "50051", "-boost-geo", "BR", "-boost-price", "1.0"]
           ports:
             - containerPort: 50051
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service

@@ -56,8 +56,6 @@ func BidHandler(dsps []dsp.DSP, capper freqcap.Capper, pub events.Publisher) htt
 		}
 		wg.Wait()
 
-		metrics.AuctionDuration.Observe(time.Since(start).Seconds())
-
 		if req.UserID != "" {
 			var allowed []dsp.Bid
 			for _, b := range bids {
@@ -105,8 +103,11 @@ func BidHandler(dsps []dsp.DSP, capper freqcap.Capper, pub events.Publisher) htt
 				ClearingPrice: clearingPrice,
 			}); err != nil {
 				slog.Warn("kafka publish failed", "err", err)
+				metrics.KafkaPublishErrors.Inc()
 			}
 		}()
+
+		metrics.AuctionDuration.Observe(time.Since(start).Seconds())
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(BidResponse{

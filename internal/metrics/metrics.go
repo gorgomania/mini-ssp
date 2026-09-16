@@ -32,4 +32,9 @@ var (
 		Name: "ssp_freqcap_filtered_total",
 		Help: "Bids filtered by frequency cap",
 	}, []string{"advertiser_id"})
+
+	KafkaPublishErrors = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "ssp_kafka_publish_errors_total",
+		Help: "Total Kafka publish failures",
+	})
 )

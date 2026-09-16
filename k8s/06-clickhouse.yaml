@@ -19,12 +19,25 @@ spec:
           ports:
             - containerPort: 8123
             - containerPort: 9000
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
           readinessProbe:
             exec:
               command: ["clickhouse-client", "--query", "SELECT 1"]
             initialDelaySeconds: 15
             periodSeconds: 5
             failureThreshold: 10
+          livenessProbe:
+            exec:
+              command: ["clickhouse-client", "--query", "SELECT 1"]
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 3
           volumeMounts:
             - name: init-sql
               mountPath: /docker-entrypoint-initdb.d

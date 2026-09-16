@@ -89,11 +89,18 @@ func main() {
 		if len(batch) == 0 {
 			return
 		}
-		if err := insert(ctx, conn, batch); err != nil {
-			slog.Error("clickhouse insert failed", "rows", len(batch), "err", err)
-		} else {
+		const maxAttempts = 3
+		for attempt := range maxAttempts {
+			if err := insert(ctx, conn, batch); err != nil {
+				slog.Warn("clickhouse insert failed", "attempt", attempt+1, "rows", len(batch), "err", err)
+				time.Sleep(time.Duration(attempt+1) * time.Second)
+				continue
+			}
 			slog.Info("flushed", "rows", len(batch))
+			batch = batch[:0]
+			return
 		}
+		slog.Error("clickhouse insert failed after retries, dropping batch", "rows", len(batch))
 		batch = batch[:0]
 	}
 
