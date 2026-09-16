@@ -1,0 +1,203 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsp-adcorp
+  namespace: ssp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsp-adcorp
+  template:
+    metadata:
+      labels:
+        app: dsp-adcorp
+    spec:
+      containers:
+        - name: dsp
+          image: mini-ssp-dsp:latest
+          imagePullPolicy: IfNotPresent
+          args: ["-name", "adcorp", "-port", "50051", "-boost-geo", "US", "-boost-price", "2.0"]
+          ports:
+            - containerPort: 50051
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsp-adcorp
+  namespace: ssp
+spec:
+  selector:
+    app: dsp-adcorp
+  ports:
+    - port: 50051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsp-medianet
+  namespace: ssp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsp-medianet
+  template:
+    metadata:
+      labels:
+        app: dsp-medianet
+    spec:
+      containers:
+        - name: dsp
+          image: mini-ssp-dsp:latest
+          imagePullPolicy: IfNotPresent
+          args: ["-name", "medianet", "-port", "50051", "-boost-geo", "EU", "-boost-price", "1.8"]
+          ports:
+            - containerPort: 50051
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsp-medianet
+  namespace: ssp
+spec:
+  selector:
+    app: dsp-medianet
+  ports:
+    - port: 50051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsp-quickads
+  namespace: ssp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsp-quickads
+  template:
+    metadata:
+      labels:
+        app: dsp-quickads
+    spec:
+      containers:
+        - name: dsp
+          image: mini-ssp-dsp:latest
+          imagePullPolicy: IfNotPresent
+          args: ["-name", "quickads", "-port", "50051", "-base-price", "1.0"]
+          ports:
+            - containerPort: 50051
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsp-quickads
+  namespace: ssp
+spec:
+  selector:
+    app: dsp-quickads
+  ports:
+    - port: 50051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsp-ruads
+  namespace: ssp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsp-ruads
+  template:
+    metadata:
+      labels:
+        app: dsp-ruads
+    spec:
+      containers:
+        - name: dsp
+          image: mini-ssp-dsp:latest
+          imagePullPolicy: IfNotPresent
+          args: ["-name", "ruads", "-port", "50051", "-boost-geo", "RU", "-boost-price", "1.2"]
+          ports:
+            - containerPort: 50051
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsp-ruads
+  namespace: ssp
+spec:
+  selector:
+    app: dsp-ruads
+  ports:
+    - port: 50051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsp-apacads
+  namespace: ssp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsp-apacads
+  template:
+    metadata:
+      labels:
+        app: dsp-apacads
+    spec:
+      containers:
+        - name: dsp
+          image: mini-ssp-dsp:latest
+          imagePullPolicy: IfNotPresent
+          args: ["-name", "apacads", "-port", "50051", "-boost-geo", "JP", "-boost-price", "1.5"]
+          ports:
+            - containerPort: 50051
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsp-apacads
+  namespace: ssp
+spec:
+  selector:
+    app: dsp-apacads
+  ports:
+    - port: 50051
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dsp-latamads
+  namespace: ssp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dsp-latamads
+  template:
+    metadata:
+      labels:
+        app: dsp-latamads
+    spec:
+      containers:
+        - name: dsp
+          image: mini-ssp-dsp:latest
+          imagePullPolicy: IfNotPresent
+          args: ["-name", "latamads", "-port", "50051", "-boost-geo", "BR", "-boost-price", "1.0"]
+          ports:
+            - containerPort: 50051
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dsp-latamads
+  namespace: ssp
+spec:
+  selector:
+    app: dsp-latamads
+  ports:
+    - port: 50051

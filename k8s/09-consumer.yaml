@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer
+  namespace: ssp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer
+  template:
+    metadata:
+      labels:
+        app: consumer
+    spec:
+      containers:
+        - name: consumer
+          image: mini-ssp-consumer:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-kafka"
+            - "kafka:9092"
+            - "-clickhouse"
+            - "clickhouse:9000"
