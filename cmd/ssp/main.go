@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorgomania/mini-ssp/internal/dsp"
+	"github.com/gorgomania/mini-ssp/internal/events"
 	"github.com/gorgomania/mini-ssp/internal/freqcap"
 	"github.com/gorgomania/mini-ssp/internal/ssp"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -27,6 +28,8 @@ func main() {
 	redisAddr := flag.String("redis", "", "Redis address for frequency capping (empty = disabled)")
 	capLimit := flag.Int64("freqcap-limit", 3, "max impressions per user per advertiser per window")
 	capWindow := flag.Duration("freqcap-window", time.Hour, "frequency cap time window")
+	kafkaBrokers := flag.String("kafka", "", "comma-separated Kafka brokers (empty = disabled)")
+	kafkaTopic := flag.String("kafka-topic", "auction.events", "Kafka topic for auction events")
 	flag.Parse()
 
 	var dsps []dsp.DSP
@@ -55,9 +58,18 @@ func main() {
 		capper = rc
 	}
 
+	var pub events.Publisher = events.NoopPublisher{}
+	if *kafkaBrokers != "" {
+		brokers := strings.Split(*kafkaBrokers, ",")
+		kp := events.NewKafkaPublisher(brokers, *kafkaTopic)
+		defer kp.Close()
+		pub = kp
+		slog.Info("kafka publishing enabled", "brokers", *kafkaBrokers, "topic", *kafkaTopic)
+	}
+
 	static, _ := fs.Sub(webFS, "web")
 	http.Handle("/", http.FileServer(http.FS(static)))
-	http.HandleFunc("/bid", ssp.BidHandler(dsps, capper))
+	http.HandleFunc("/bid", ssp.BidHandler(dsps, capper, pub))
 	http.Handle("/metrics", promhttp.Handler())
 	slog.Info("SSP HTTP listening", "port", *port)
 	if err := http.ListenAndServe(":"+*port, nil); err != nil {

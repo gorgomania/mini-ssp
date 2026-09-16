@@ -1,6 +1,7 @@
 package ssp
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gorgomania/mini-ssp/internal/auction"
 	"github.com/gorgomania/mini-ssp/internal/dsp"
+	"github.com/gorgomania/mini-ssp/internal/events"
 	"github.com/gorgomania/mini-ssp/internal/freqcap"
 	"github.com/gorgomania/mini-ssp/internal/metrics"
 )
@@ -25,7 +27,7 @@ type BidResponse struct {
 	Price        float64 `json:"price"`
 }
 
-func BidHandler(dsps []dsp.DSP, capper freqcap.Capper) http.HandlerFunc {
+func BidHandler(dsps []dsp.DSP, capper freqcap.Capper, pub events.Publisher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -89,6 +91,19 @@ func BidHandler(dsps []dsp.DSP, capper freqcap.Capper) http.HandlerFunc {
 
 		slog.Info("auction", "geo", req.Geo, "format", req.Format,
 			"winner", winner.AdvertiserID, "bid", winner.Price, "clearing", clearingPrice)
+
+		go func() {
+			if err := pub.Publish(context.Background(), events.AuctionEvent{
+				Timestamp:     time.Now(),
+				UserID:        req.UserID,
+				Geo:           req.Geo,
+				Format:        req.Format,
+				AdvertiserID:  winner.AdvertiserID,
+				ClearingPrice: clearingPrice,
+			}); err != nil {
+				slog.Warn("kafka publish failed", "err", err)
+			}
+		}()
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(BidResponse{

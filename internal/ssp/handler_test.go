@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/gorgomania/mini-ssp/internal/dsp"
+	"github.com/gorgomania/mini-ssp/internal/events"
 	"github.com/gorgomania/mini-ssp/internal/freqcap"
 	"github.com/gorgomania/mini-ssp/internal/ssp"
 )
@@ -39,7 +40,7 @@ func post(t *testing.T, handler http.Handler, req ssp.BidRequest) *httptest.Resp
 }
 
 func TestBidHandler_NoDSPs(t *testing.T) {
-	rr := post(t, ssp.BidHandler(nil, noop), ssp.BidRequest{Geo: "US", Format: "banner"})
+	rr := post(t, ssp.BidHandler(nil, noop, events.NoopPublisher{}), ssp.BidRequest{Geo: "US", Format: "banner"})
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d", rr.Code)
 	}
@@ -50,7 +51,7 @@ func TestBidHandler_Winner(t *testing.T) {
 		fixedDSP{"a", 2.0, true},
 		fixedDSP{"b", 1.0, true},
 	}
-	rr := post(t, ssp.BidHandler(dsps, noop), ssp.BidRequest{Geo: "US", Format: "banner"})
+	rr := post(t, ssp.BidHandler(dsps, noop, events.NoopPublisher{}), ssp.BidRequest{Geo: "US", Format: "banner"})
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
@@ -66,7 +67,7 @@ func TestBidHandler_Winner(t *testing.T) {
 
 func TestBidHandler_FloorPrice(t *testing.T) {
 	dsps := []dsp.DSP{fixedDSP{"a", 1.0, true}}
-	rr := post(t, ssp.BidHandler(dsps, noop), ssp.BidRequest{Geo: "US", Format: "banner", FloorPrice: 100.0})
+	rr := post(t, ssp.BidHandler(dsps, noop, events.NoopPublisher{}), ssp.BidRequest{Geo: "US", Format: "banner", FloorPrice: 100.0})
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
@@ -80,7 +81,7 @@ func TestBidHandler_FloorPrice(t *testing.T) {
 
 func TestBidHandler_DSPPasses(t *testing.T) {
 	dsps := []dsp.DSP{fixedDSP{"a", 1.0, false}}
-	rr := post(t, ssp.BidHandler(dsps, noop), ssp.BidRequest{Geo: "US", Format: "video"})
+	rr := post(t, ssp.BidHandler(dsps, noop, events.NoopPublisher{}), ssp.BidRequest{Geo: "US", Format: "video"})
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d", rr.Code)
 	}
@@ -89,7 +90,7 @@ func TestBidHandler_DSPPasses(t *testing.T) {
 func TestBidHandler_BadRequest(t *testing.T) {
 	r := httptest.NewRequest(http.MethodPost, "/bid", bytes.NewBufferString("not json"))
 	rr := httptest.NewRecorder()
-	ssp.BidHandler(nil, noop).ServeHTTP(rr, r)
+	ssp.BidHandler(nil, noop, events.NoopPublisher{}).ServeHTTP(rr, r)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rr.Code)
 	}
@@ -125,7 +126,7 @@ func TestBidHandler_FreqCap_FiltersCapped(t *testing.T) {
 	}
 	// пользователь u1 закапан для advertiser "a" → выигрывает "b"
 	spy := newSpyCapper("u1:a")
-	rr := post(t, ssp.BidHandler(dsps, spy), ssp.BidRequest{UserID: "u1", Geo: "US", Format: "banner"})
+	rr := post(t, ssp.BidHandler(dsps, spy, events.NoopPublisher{}), ssp.BidRequest{UserID: "u1", Geo: "US", Format: "banner"})
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
@@ -142,7 +143,7 @@ func TestBidHandler_FreqCap_AllCapped(t *testing.T) {
 		fixedDSP{"b", 1.0, true},
 	}
 	spy := newSpyCapper("u1:a", "u1:b")
-	rr := post(t, ssp.BidHandler(dsps, spy), ssp.BidRequest{UserID: "u1", Geo: "US", Format: "banner"})
+	rr := post(t, ssp.BidHandler(dsps, spy, events.NoopPublisher{}), ssp.BidRequest{UserID: "u1", Geo: "US", Format: "banner"})
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d", rr.Code)
 	}
@@ -154,7 +155,7 @@ func TestBidHandler_FreqCap_RecordsWinner(t *testing.T) {
 		fixedDSP{"b", 1.0, true},
 	}
 	spy := newSpyCapper()
-	post(t, ssp.BidHandler(dsps, spy), ssp.BidRequest{UserID: "u1", Geo: "US", Format: "banner"})
+	post(t, ssp.BidHandler(dsps, spy, events.NoopPublisher{}), ssp.BidRequest{UserID: "u1", Geo: "US", Format: "banner"})
 	if len(spy.recorded) != 1 || spy.recorded[0] != "a" {
 		t.Fatalf("expected Record(a), got %v", spy.recorded)
 	}
@@ -164,7 +165,7 @@ func TestBidHandler_FreqCap_SkippedWithoutUserID(t *testing.T) {
 	dsps := []dsp.DSP{fixedDSP{"a", 2.0, true}}
 	// capper закапывает всех, но user_id пустой → cap игнорируется
 	spy := newSpyCapper("" + ":" + "a") // на случай если всё-таки вызовут с ""
-	rr := post(t, ssp.BidHandler(dsps, spy), ssp.BidRequest{Geo: "US", Format: "banner"})
+	rr := post(t, ssp.BidHandler(dsps, spy, events.NoopPublisher{}), ssp.BidRequest{Geo: "US", Format: "banner"})
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
