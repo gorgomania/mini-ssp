@@ -10,13 +10,16 @@ import (
 
 type Capper interface {
 	IsCapped(ctx context.Context, userID, advertiserID string) bool
-	Record(ctx context.Context, userID, advertiserID string)
+	// Record atomically increments the impression counter and returns true if the
+	// impression is allowed (counter was below the limit). Returns false if the cap
+	// was already reached — the caller should not serve the ad.
+	Record(ctx context.Context, userID, advertiserID string) bool
 }
 
 type NoopCapper struct{}
 
 func (NoopCapper) IsCapped(_ context.Context, _, _ string) bool { return false }
-func (NoopCapper) Record(_ context.Context, _, _ string)        {}
+func (NoopCapper) Record(_ context.Context, _, _ string) bool   { return true }
 
 type RedisCapper struct {
 	client *redis.Client
@@ -32,6 +35,20 @@ func NewRedisCapper(addr string, limit int64, window time.Duration) (*RedisCappe
 	return &RedisCapper{client: client, limit: limit, window: window}, nil
 }
 
+// luaRecord atomically increments the counter, sets TTL on first write, and
+// rolls back if the limit is exceeded. Returns 1 if allowed, 0 if capped.
+var luaRecord = redis.NewScript(`
+local count = redis.call('INCR', KEYS[1])
+if count == 1 then
+    redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+if count > tonumber(ARGV[2]) then
+    redis.call('DECR', KEYS[1])
+    return 0
+end
+return 1
+`)
+
 func (c *RedisCapper) IsCapped(ctx context.Context, userID, advertiserID string) bool {
 	key := fmt.Sprintf("fc:%s:%s", userID, advertiserID)
 	count, err := c.client.Get(ctx, key).Int64()
@@ -41,13 +58,13 @@ func (c *RedisCapper) IsCapped(ctx context.Context, userID, advertiserID string)
 	return count >= c.limit
 }
 
-func (c *RedisCapper) Record(ctx context.Context, userID, advertiserID string) {
+func (c *RedisCapper) Record(ctx context.Context, userID, advertiserID string) bool {
 	key := fmt.Sprintf("fc:%s:%s", userID, advertiserID)
-	count, err := c.client.Incr(ctx, key).Result()
+	windowSecs := int64(c.window.Seconds())
+	result, err := luaRecord.Run(ctx, c.client, []string{key},
+		windowSecs, c.limit).Int64()
 	if err != nil {
-		return
+		return true // fail-open: don't block on Redis errors
 	}
-	if count == 1 {
-		c.client.Expire(ctx, key, c.window)
-	}
+	return result == 1
 }

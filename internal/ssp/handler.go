@@ -79,7 +79,12 @@ func BidHandler(dsps []dsp.DSP, capper freqcap.Capper) http.HandlerFunc {
 		metrics.WinnerBids.WithLabelValues(winner.AdvertiserID).Inc()
 
 		if req.UserID != "" {
-			capper.Record(r.Context(), req.UserID, winner.AdvertiserID)
+			if !capper.Record(r.Context(), req.UserID, winner.AdvertiserID) {
+				slog.Info("freqcap denied winner at record", "user", req.UserID, "advertiser", winner.AdvertiserID)
+				metrics.AuctionsTotal.WithLabelValues(req.Geo, req.Format, "no_bid").Inc()
+				http.Error(w, "no bids", http.StatusNoContent)
+				return
+			}
 		}
 
 		slog.Info("auction", "geo", req.Geo, "format", req.Format,

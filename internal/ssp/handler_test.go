@@ -113,8 +113,9 @@ func (s *spyCapper) IsCapped(_ context.Context, userID, advID string) bool {
 	return s.capped[userID+":"+advID]
 }
 
-func (s *spyCapper) Record(_ context.Context, _, advID string) {
+func (s *spyCapper) Record(_ context.Context, _, advID string) bool {
 	s.recorded = append(s.recorded, advID)
+	return true
 }
 
 func TestBidHandler_FreqCap_FiltersCapped(t *testing.T) {
