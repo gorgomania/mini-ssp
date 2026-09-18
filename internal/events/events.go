@@ -44,6 +44,9 @@ func NewKafkaPublisher(brokers []string, topic string) *KafkaPublisher {
 			Topic:                  topic,
 			Balancer:               &kafka.LeastBytes{},
 			AllowAutoTopicCreation: true,
+			MaxAttempts:            5,
+			WriteTimeout:           10 * time.Second,
+			ReadTimeout:            10 * time.Second,
 		},
 		sem: make(chan struct{}, maxKafkaConcurrency),
 	}
