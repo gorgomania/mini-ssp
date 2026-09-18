@@ -1,8 +1,9 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net"
+	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -13,6 +14,8 @@ import (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
 	dsps := []dsp.DSP{
 		dsp.AdCorp{},
 		dsp.MediaNet{},
@@ -21,15 +24,17 @@ func main() {
 
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		slog.Error("listen failed", "err", err)
+		os.Exit(1)
 	}
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterAuctionServer(grpcServer, server.New(dsps))
 	reflection.Register(grpcServer)
 
-	log.Println("auction server listening on :50051")
+	slog.Info("auction server listening", "port", 50051)
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		slog.Error("serve failed", "err", err)
+		os.Exit(1)
 	}
 }

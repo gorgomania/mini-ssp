@@ -21,12 +21,12 @@ func New(dsps []dsp.DSP) *AuctionServer {
 func (s *AuctionServer) RunAuction(ctx context.Context, req *pb.BidRequest) (*pb.BidResponse, error) {
 	var bids []dsp.Bid
 	for _, d := range s.dsps {
-		if b, ok := d.Bid(ctx, req.Geo, req.Format, 0); ok {
+		if b, ok := d.Bid(ctx, req.Geo, req.Format, req.FloorPrice); ok {
 			bids = append(bids, b)
 		}
 	}
 
-	winner, clearingPrice, ok := auction.SecondPrice(bids, 0)
+	winner, clearingPrice, ok := auction.SecondPrice(bids, req.FloorPrice)
 	if !ok {
 		log.Printf("no bids geo=%s format=%s", req.Geo, req.Format)
 		return &pb.BidResponse{}, nil

@@ -9,4 +9,4 @@ CREATE TABLE IF NOT EXISTS default.auction_events
 )
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(ts)
-ORDER BY (geo, format, advertiser_id, ts);
+ORDER BY (ts, geo, format, advertiser_id);
