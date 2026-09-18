@@ -1,0 +1,14 @@
+# Go binaries
+/ssp
+/consumer
+/dsp
+/server
+/demo
+
+# Build output
+*.exe
+*.test
+*.out
+
+# Go workspace
+/vendor/
