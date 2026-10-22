@@ -33,7 +33,7 @@ PostgreSQL (DSP config,           ClickHouse
 - **Frequency capping** — Redis-backed with atomic Lua script (no TOCTOU race); per-advertiser rules loaded from PostgreSQL
 - **Kafka streaming** — auction events published fire-and-forget with backpressure (256-slot semaphore)
 - **ClickHouse analytics** — batched inserts (1000 events or 5s), MergeTree table
-- **Rate limiting** — token bucket on `/bid` via `golang.org/x/time/rate`
+- **Rate limiting** — per-IP token bucket on `/bid` via `golang.org/x/time/rate`; inactive IPs evicted after 3 minutes
 - **Graceful shutdown** — 10s drain on SIGINT/SIGTERM
 - **Container-aware** — `automaxprocs` sets `GOMAXPROCS` from cgroup CPU quota
 
@@ -199,6 +199,8 @@ go test ./...
 - `internal/freqcap` — 9 unit tests with miniredis (including concurrent correctness)
 - `internal/store` — 3 integration tests with testcontainers (real PostgreSQL)
 - `internal/ssp` — handler tests (freqcap block, auction win, no bids)
+- `internal/middleware` — per-IP rate limiter unit tests
+- `cmd/consumer` — ClickHouse integration test for batch insert
 
 ## Tech stack
 
