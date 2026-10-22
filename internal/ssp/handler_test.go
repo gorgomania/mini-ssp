@@ -56,7 +56,9 @@ func TestBidHandler_Winner(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 	var resp ssp.BidResponse
-	json.NewDecoder(rr.Body).Decode(&resp)
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 	if resp.AdvertiserID != "a" {
 		t.Fatalf("expected winner a, got %s", resp.AdvertiserID)
 	}
@@ -72,7 +74,9 @@ func TestBidHandler_FloorPrice(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 	var resp ssp.BidResponse
-	json.NewDecoder(rr.Body).Decode(&resp)
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 	// единственный бид → clearing = floor = 100
 	if resp.Price != 100.0 {
 		t.Fatalf("expected clearing 100.0, got %f", resp.Price)
@@ -131,7 +135,9 @@ func TestBidHandler_FreqCap_FiltersCapped(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 	var resp ssp.BidResponse
-	json.NewDecoder(rr.Body).Decode(&resp)
+	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
 	if resp.AdvertiserID != "b" {
 		t.Fatalf("expected winner b, got %s", resp.AdvertiserID)
 	}

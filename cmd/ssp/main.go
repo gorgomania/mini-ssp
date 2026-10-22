@@ -112,7 +112,11 @@ func run() error {
 	var pub events.Publisher = events.NoopPublisher{}
 	if *kafkaBrokers != "" {
 		kp := events.NewKafkaPublisher(strings.Split(*kafkaBrokers, ","), *kafkaTopic)
-		defer kp.Close()
+		defer func() {
+			if err := kp.Close(); err != nil {
+				slog.Warn("kafka publisher close failed", "err", err)
+			}
+		}()
 		pub = kp
 		slog.Info("kafka publishing enabled", "brokers", *kafkaBrokers, "topic", *kafkaTopic)
 	}

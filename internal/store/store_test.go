@@ -24,7 +24,11 @@ func startPostgres(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("start postgres: %v", err)
 	}
-	t.Cleanup(func() { c.Terminate(ctx) })
+	t.Cleanup(func() {
+		if err := c.Terminate(ctx); err != nil {
+			t.Logf("terminate postgres: %v", err)
+		}
+	})
 
 	dsn, err := c.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {

@@ -65,7 +65,11 @@ func main() {
 		slog.Error("clickhouse open failed", "err", err)
 		os.Exit(1)
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			slog.Warn("clickhouse close failed", "err", err)
+		}
+	}()
 
 	if err := conn.Ping(context.Background()); err != nil {
 		slog.Error("clickhouse ping failed", "err", err)
@@ -78,7 +82,11 @@ func main() {
 		Topic:   *topic,
 		GroupID: "clickhouse-consumer",
 	})
-	defer reader.Close()
+	defer func() {
+		if err := reader.Close(); err != nil {
+			slog.Warn("kafka reader close failed", "err", err)
+		}
+	}()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

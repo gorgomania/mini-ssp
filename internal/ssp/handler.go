@@ -110,9 +110,11 @@ func BidHandler(dsps []dsp.DSP, capper freqcap.Capper, pub events.Publisher) htt
 		metrics.AuctionDuration.Observe(time.Since(start).Seconds())
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(BidResponse{
+		if err := json.NewEncoder(w).Encode(BidResponse{
 			AdvertiserID: winner.AdvertiserID,
 			Price:        clearingPrice,
-		})
+		}); err != nil {
+			slog.Warn("encode response failed", "err", err)
+		}
 	}
 }
